@@ -19,6 +19,7 @@ SHINERAY_MODELS = [
 ]
 
 def generar_texto_facebook(modelo):
+    """Genera texto publicitario con GPT-4o-mini"""
     prompt = f"""
     Actúa como un experto en marketing digital para una agencia de vehículos comerciales en Guadalajara, México.
     Crea una publicación de Facebook corta, atractiva y profesional (máximo 150 palabras) sobre el siguiente vehículo:
@@ -26,7 +27,7 @@ def generar_texto_facebook(modelo):
     Características clave: {modelo['enfoque']}
     
     Requisitos:
-    - Usa emojis relevantes (🚛, ✅, 💰, ).
+    - Usa emojis relevantes (🚛, ✅, , 📍).
     - Incluye un llamado a la acción claro.
     - Incluye 3 hashtags relevantes al final.
     - Tono: Profesional, confiable y entusiasta.
@@ -42,23 +43,39 @@ def generar_texto_facebook(modelo):
         return f"Error al generar texto: {e}"
 
 def generar_imagen_dalle(modelo_nombre):
-    """Genera imagen usando DALL-E 3"""
+    """Genera imagen usando DALL-E 3 con fallback a Pollinations.ai"""
     prompt = f"Professional commercial photography of a {modelo_nombre} white utility truck, working in Guadalajara Mexico, sunny day, realistic, high resolution, automotive advertisement style, clean background"
     
+    # Intentar con DALL-E 3 primero
     try:
         response = openai.images.generate(
-            model="gpt-image-1",
+            model="dall-e-3",
             prompt=prompt,
             size="1024x1024",
-            quality="high",
+            quality="standard",
             n=1,
         )
-        image_url = response.data[0].url
-        image_response = requests.get(image_url)
-        return BytesIO(image_response.content)
+        
+        if response.data and len(response.data) > 0:
+            image_url = response.data[0].url
+            if image_url:
+                image_response = requests.get(image_url, timeout=30)
+                if image_response.status_code == 200:
+                    return BytesIO(image_response.content)
     except Exception as e:
-        st.error(f"Error generando imagen: {e}")
-        return None
+        st.warning(f"DALL-E 3 no disponible, usando alternativa gratuita: {e}")
+    
+    # Fallback a Pollinations.ai (gratuito)
+    try:
+        encoded_prompt = requests.utils.quote(prompt)
+        pollinations_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true&seed={random.randint(1, 9999)}"
+        image_response = requests.get(pollinations_url, timeout=30)
+        if image_response.status_code == 200:
+            return BytesIO(image_response.content)
+    except Exception as e:
+        st.error(f"Error con Pollinations.ai: {e}")
+    
+    return None
 
 # INTERFAZ STREAMLIT
 st.set_page_config(page_title="Shineray AutoPost", page_icon="🚛", layout="wide")
@@ -68,12 +85,12 @@ st.markdown("### Genera publicaciones con IA para Facebook")
 st.markdown("---")
 
 # Sidebar
-st.sidebar.header("⚙️ Configuración")
+st.sidebar.header("️ Configuración")
 
 if os.getenv("OPENAI_API_KEY"):
     st.sidebar.success("✅ OpenAI Configurado")
 else:
-    st.sidebar.error(" Falta OPENAI_API_KEY en Secrets")
+    st.sidebar.error("❌ Falta OPENAI_API_KEY en Secrets")
 
 # Contenido principal
 st.subheader("🎨 Crear Nueva Publicación")
