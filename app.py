@@ -1,9 +1,13 @@
 import streamlit as st
+import openai
 import requests
 import os
 import random
 import urllib.request
 from io import BytesIO
+
+# Configuración de OpenAI
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Configuración de OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
