@@ -1,125 +1,76 @@
 import streamlit as st
-import openai
-import requests
 import os
 import random
 from io import BytesIO
+import urllib.request
 
-# Configuración de OpenAI
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Intentar importar openai
+try:
+    import openai
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    st.error("❌ La librería 'openai' no está instalada. Verifica requirements.txt")
 
 # Modelos Shineray
 SHINERAY_MODELS = [
-    {"nombre": "Shineray T30", "enfoque": "Mini Truck económica, ideal para repartos urbanos y emprendedores. Chasis reforzado.", "busqueda": "mini truck commercial vehicle"},
-    {"nombre": "Shineray T32", "enfoque": "Doble cabina, perfecta para llevar equipo de trabajo y personal con comodidad.", "busqueda": "double cabin pickup truck commercial"},
-    {"nombre": "Shineray T50", "enfoque": "Truck de mayor capacidad, resistencia extrema para trabajos pesados y flotillas.", "busqueda": "commercial cargo truck"},
-    {"nombre": "Shineray X30", "enfoque": "Van de carga cerrada, seguridad para tu mercancía y puertas traseras dobles.", "busqueda": "cargo van commercial vehicle"},
-    {"nombre": "Shineray G03F", "enfoque": "Cargo Van moderna, tecnología y eficiencia de combustible para la ciudad.", "busqueda": "modern delivery van"},
-    {"nombre": "Shineray G05 Pro", "enfoque": "SUV comercial versátil, combina confort para pasajeros con capacidad de carga.", "busqueda": "commercial SUV vehicle"}
+    {"nombre": "Shineray T30", "enfoque": "Mini Truck económica", "busqueda": "mini truck"},
+    {"nombre": "Shineray T32", "enfoque": "Doble cabina", "busqueda": "pickup truck"},
+    {"nombre": "Shineray T50", "enfoque": "Truck capacidad", "busqueda": "cargo truck"},
+    {"nombre": "Shineray X30", "enfoque": "Van carga", "busqueda": "cargo van"},
+    {"nombre": "Shineray G03F", "enfoque": "Cargo Van", "busqueda": "delivery van"},
+    {"nombre": "Shineray G05 Pro", "enfoque": "SUV comercial", "busqueda": "commercial SUV"}
 ]
 
-def generar_texto_facebook(modelo):
-    """Genera texto publicitario con GPT-4o-mini"""
-    prompt = f"""
-    Actúa como un experto en marketing digital para una agencia de vehículos comerciales en Guadalajara, México.
-    Crea una publicación de Facebook corta, atractiva y profesional (máximo 150 palabras) sobre el siguiente vehículo:
-    Vehículo: {modelo['nombre']}
-    Características clave: {modelo['enfoque']}
+def generar_texto(modelo):
+    if not OPENAI_AVAILABLE:
+        return "Error: OpenAI no disponible"
     
-    Requisitos:
-    - Usa emojis relevantes.
-    - Incluye un llamado a la acción claro.
-    - Incluye 3 hashtags relevantes al final.
-    - Tono: Profesional, confiable y entusiasta.
-    """
+    prompt = f"Crea un post de Facebook para {modelo['nombre']}: {modelo['enfoque']}. Usa emojis y hashtags."
+    
     try:
         response = openai.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.8
+            messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        return f"Error al generar texto: {e}"
+        return f"Error: {e}"
 
-def obtener_imagen_vehiculo(busqueda):
-    """Obtiene imagen real de Unsplash (gratuita, sin límites)"""
-    # Usamos Unsplash Source (servicio gratuito de imágenes)
-    url = f"https://source.unsplash.com/1024x1024/?{requests.utils.quote(busqueda)}&sig={random.randint(1, 9999)}"
-    
+def obtener_imagen(busqueda):
+    url = f"https://source.unsplash.com/1024x1024/?{busqueda.replace(' ', ',')}&sig={random.randint(1,9999)}"
     try:
-        response = requests.get(url, timeout=30, allow_redirects=True)
-        if response.status_code == 200 and len(response.content) > 1000:
-            return BytesIO(response.content)
-    except Exception as e:
-        st.error(f"Error obteniendo imagen: {e}")
-    
-    return None
+        response = urllib.request.urlopen(url, timeout=30)
+        return BytesIO(response.read())
+    except:
+        return None
 
-# INTERFAZ STREAMLIT
-st.set_page_config(page_title="Shineray AutoPost", page_icon="🚛", layout="wide")
+# Interfaz
+st.set_page_config(page_title="Shineray AutoPost", layout="wide")
+st.title(" Shineray AutoPost")
 
-st.title("🚛 Shineray AutoPost")
-st.markdown("### Genera publicaciones con IA para Facebook")
-st.markdown("---")
-
-# Sidebar
-st.sidebar.header("⚙️ Configuración")
-
-if os.getenv("OPENAI_API_KEY"):
-    st.sidebar.success("✅ OpenAI Configurado")
+if OPENAI_AVAILABLE and os.getenv("OPENAI_API_KEY"):
+    st.sidebar.success("✅ OpenAI OK")
 else:
-    st.sidebar.error("❌ Falta OPENAI_API_KEY en Secrets")
+    st.sidebar.error("❌ OpenAI no configurado")
 
-# Contenido principal
-st.subheader(" Crear Nueva Publicación")
+modelo = st.selectbox("Modelo:", [m["nombre"] for m in SHINERAY_MODELS])
 
-col1, col2 = st.columns([1, 2])
-
-with col1:
-    st.markdown("### Paso 1: Selecciona el vehículo")
-    modelo_seleccionado = st.selectbox("Modelo Shineray:", [m["nombre"] for m in SHINERAY_MODELS])
+if st.button("✨ Generar", type="primary"):
+    modelo_data = next(m for m in SHINERAY_MODELS if m["nombre"] == modelo)
     
-    if st.button("✨ Generar Contenido con IA", type="primary", use_container_width=True):
-        if not os.getenv("OPENAI_API_KEY"):
-            st.error("❌ Falta la clave de OpenAI. Ve a 'Manage app' → 'Secrets'")
-        else:
-            with st.spinner("La IA está trabajando (esto puede tomar 15-30 segundos)..."):
-                modelo_data = next(m for m in SHINERAY_MODELS if m["nombre"] == modelo_seleccionado)
-                texto_generado = generar_texto_facebook(modelo_data)
-                imagen_bytes = obtener_imagen_vehiculo(modelo_data["busqueda"])
-                
-                st.session_state['texto'] = texto_generado
-                st.session_state['imagen_bytes'] = imagen_bytes
-                st.session_state['modelo'] = modelo_seleccionado
+    with st.spinner("Generando..."):
+        texto = generar_texto(modelo_data)
+        imagen = obtener_imagen(modelo_data["busqueda"])
+        
+        st.session_state['texto'] = texto
+        st.session_state['imagen'] = imagen
 
-with col2:
-    if 'texto' in st.session_state and 'imagen_bytes' in st.session_state:
-        st.markdown("### Paso 2: Copia y publica")
-        
-        if st.session_state['imagen_bytes']:
-            st.image(st.session_state['imagen_bytes'], caption=f"Imagen para {st.session_state['modelo']}", use_container_width=True)
-        else:
-            st.warning("⚠️ No se pudo obtener la imagen. Intenta de nuevo.")
-        
-        st.markdown("**💡 Tip:** Haz clic derecho en la imagen y selecciona 'Copiar imagen' para pegarla en Facebook")
-        
-        st.markdown("---")
-        
-        st.markdown("###  Texto del post:")
-        st.text_area(
-            "Copia este texto:", 
-            value=st.session_state['texto'], 
-            height=200,
-            key="texto_final"
-        )
-        
-        st.markdown("""
-        ###  Instrucciones para publicar:
-        1. **Copia el texto** de arriba (selecciónalo y Ctrl+C)
-        2. **Copia la imagen** (clic derecho sobre la imagen → Copiar imagen)
-        3. Ve a tu **Facebook personal**
-        4. Crea una **nueva publicación**
-        5. **Pega el texto** y **pega la imagen**
-        6. ¡Publica! 
-        """)
+if 'texto' in st.session_state:
+    st.text_area("Texto:", value=st.session_state['texto'], height=200)
+    
+    if st.session_state.get('imagen'):
+        st.image(st.session_state['imagen'], caption=modelo)
+    else:
+        st.warning("No se pudo cargar la imagen")
