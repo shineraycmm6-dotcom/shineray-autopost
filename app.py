@@ -41,10 +41,21 @@ def generar_texto_facebook(modelo):
         return f"Error al generar texto: {e}"
 
 def generar_url_imagen(modelo_nombre):
-    prompt = f"Professional commercial photography of a {modelo_nombre} utility truck, working in Guadalajara Mexico, sunny day, realistic, high resolution, 4k"
-    encoded_prompt = requests.utils.quote(prompt)
-    return f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1080&nologo=true&seed={random.randint(1, 9999)}"
-
+    """Genera imagen usando DALL-E 3 de OpenAI"""
+    prompt = f"Professional commercial photography of a {modelo_nombre} white utility truck, working in Guadalajara Mexico, sunny day, realistic, high resolution, automotive advertisement style, clean background"
+    
+    try:
+        response = openai.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            size="1024x1024",
+            quality="standard",
+            n=1,
+        )
+        return response.data[0].url
+    except Exception as e:
+        return f"https://via.placeholder.com/1080x1080?text=Error+generando+imagen:+{e}"
+        
 # INTERFAZ STREAMLIT
 st.set_page_config(page_title="Shineray AutoPost", page_icon="🚛", layout="wide")
 
