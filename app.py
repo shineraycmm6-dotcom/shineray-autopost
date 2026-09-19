@@ -47,7 +47,7 @@ def generar_imagen_dalle(modelo_nombre):
     
     try:
         response = openai.images.generate(
-            model="dall-e-3",
+            model="gpt-image-1",
             prompt=prompt,
             size="1024x1024",
             quality="standard",
