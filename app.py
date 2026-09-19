@@ -3,12 +3,8 @@ import openai
 import requests
 import os
 import random
-from dotenv import load_dotenv
 
-# Cargar variables de entorno
-load_dotenv()
-
-# Configuración de OpenAI
+# Configuración de OpenAI - Streamlit Cloud inyecta los Secrets automáticamente
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Modelos Shineray
@@ -57,12 +53,12 @@ st.markdown("### Genera publicaciones con IA para Facebook")
 st.markdown("---")
 
 # Sidebar
-st.sidebar.header("⚙️ Configuración")
+st.sidebar.header("️ Configuración")
 
 if os.getenv("OPENAI_API_KEY"):
     st.sidebar.success("✅ OpenAI Configurado")
 else:
-    st.sidebar.error("❌ Falta OPENAI_API_KEY en el archivo .env")
+    st.sidebar.error("❌ Falta OPENAI_API_KEY en Secrets")
 
 # Contenido principal
 st.subheader("🎨 Crear Nueva Publicación")
@@ -74,27 +70,28 @@ with col1:
     modelo_seleccionado = st.selectbox("Modelo Shineray:", [m["nombre"] for m in SHINERAY_MODELS])
     
     if st.button("✨ Generar Contenido con IA", type="primary", use_container_width=True):
-        with st.spinner("La IA está trabajando..."):
-            modelo_data = next(m for m in SHINERAY_MODELS if m["nombre"] == modelo_seleccionado)
-            texto_generado = generar_texto_facebook(modelo_data)
-            imagen_generada = generar_url_imagen(modelo_data["nombre"])
-            
-            st.session_state['texto'] = texto_generado
-            st.session_state['imagen'] = imagen_generada
-            st.session_state['modelo'] = modelo_seleccionado
+        if not os.getenv("OPENAI_API_KEY"):
+            st.error("️ Falta la clave de OpenAI. Ve a 'Manage app' → 'Secrets' y agrega OPENAI_API_KEY")
+        else:
+            with st.spinner("La IA está trabajando..."):
+                modelo_data = next(m for m in SHINERAY_MODELS if m["nombre"] == modelo_seleccionado)
+                texto_generado = generar_texto_facebook(modelo_data)
+                imagen_generada = generar_url_imagen(modelo_data["nombre"])
+                
+                st.session_state['texto'] = texto_generado
+                st.session_state['imagen'] = imagen_generada
+                st.session_state['modelo'] = modelo_seleccionado
 
 with col2:
     if 'texto' in st.session_state and 'imagen' in st.session_state:
         st.markdown("### Paso 2: Copia y publica")
         
-        # Mostrar imagen
         st.image(st.session_state['imagen'], caption=f"Imagen para {st.session_state['modelo']}", use_container_width=True)
         
         st.markdown("**💡 Tip:** Haz clic derecho en la imagen y selecciona 'Copiar imagen' para pegarla en Facebook")
         
         st.markdown("---")
         
-        # Mostrar texto con botón de copiar
         st.markdown("### 📝 Texto del post:")
         st.text_area(
             "Copia este texto:", 
