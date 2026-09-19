@@ -3,23 +3,19 @@ import openai
 import requests
 import os
 import random
-import urllib.request
 from io import BytesIO
-
-# Configuración de OpenAI
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Configuración de OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Modelos Shineray
 SHINERAY_MODELS = [
-    {"nombre": "Shineray T30", "enfoque": "Mini Truck económica, ideal para repartos urbanos y emprendedores. Chasis reforzado."},
-    {"nombre": "Shineray T32", "enfoque": "Doble cabina, perfecta para llevar equipo de trabajo y personal con comodidad."},
-    {"nombre": "Shineray T50", "enfoque": "Truck de mayor capacidad, resistencia extrema para trabajos pesados y flotillas."},
-    {"nombre": "Shineray X30", "enfoque": "Van de carga cerrada, seguridad para tu mercancía y puertas traseras dobles."},
-    {"nombre": "Shineray G03F", "enfoque": "Cargo Van moderna, tecnología y eficiencia de combustible para la ciudad."},
-    {"nombre": "Shineray G05 Pro", "enfoque": "SUV comercial versátil, combina confort para pasajeros con capacidad de carga."}
+    {"nombre": "Shineray T30", "enfoque": "Mini Truck económica, ideal para repartos urbanos y emprendedores. Chasis reforzado.", "busqueda": "mini truck commercial vehicle"},
+    {"nombre": "Shineray T32", "enfoque": "Doble cabina, perfecta para llevar equipo de trabajo y personal con comodidad.", "busqueda": "double cabin pickup truck commercial"},
+    {"nombre": "Shineray T50", "enfoque": "Truck de mayor capacidad, resistencia extrema para trabajos pesados y flotillas.", "busqueda": "commercial cargo truck"},
+    {"nombre": "Shineray X30", "enfoque": "Van de carga cerrada, seguridad para tu mercancía y puertas traseras dobles.", "busqueda": "cargo van commercial vehicle"},
+    {"nombre": "Shineray G03F", "enfoque": "Cargo Van moderna, tecnología y eficiencia de combustible para la ciudad.", "busqueda": "modern delivery van"},
+    {"nombre": "Shineray G05 Pro", "enfoque": "SUV comercial versátil, combina confort para pasajeros con capacidad de carga.", "busqueda": "commercial SUV vehicle"}
 ]
 
 def generar_texto_facebook(modelo):
@@ -46,22 +42,19 @@ def generar_texto_facebook(modelo):
     except Exception as e:
         return f"Error al generar texto: {e}"
 
-def generar_imagen(modelo_nombre):
-    """Genera imagen usando Pollinations.ai (gratuito)"""
-    prompt = f"Professional commercial photography of a {modelo_nombre} white utility truck, Guadalajara Mexico, sunny day, realistic, automotive advertisement"
-    seed = random.randint(1, 9999)
-    
-    # URL directa de Pollinations
-    url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt)}?width=1024&height=1024&nologo=true&seed={seed}"
+def obtener_imagen_vehiculo(busqueda):
+    """Obtiene imagen real de Unsplash (gratuita, sin límites)"""
+    # Usamos Unsplash Source (servicio gratuito de imágenes)
+    url = f"https://source.unsplash.com/1024x1024/?{requests.utils.quote(busqueda)}&sig={random.randint(1, 9999)}"
     
     try:
-        # Descargar la imagen
-        response = urllib.request.urlopen(url, timeout=30)
-        image_data = response.read()
-        return BytesIO(image_data)
+        response = requests.get(url, timeout=30, allow_redirects=True)
+        if response.status_code == 200 and len(response.content) > 1000:
+            return BytesIO(response.content)
     except Exception as e:
-        st.error(f"Error con Pollinations: {e}")
-        return None
+        st.error(f"Error obteniendo imagen: {e}")
+    
+    return None
 
 # INTERFAZ STREAMLIT
 st.set_page_config(page_title="Shineray AutoPost", page_icon="🚛", layout="wide")
@@ -79,7 +72,7 @@ else:
     st.sidebar.error("❌ Falta OPENAI_API_KEY en Secrets")
 
 # Contenido principal
-st.subheader("🎨 Crear Nueva Publicación")
+st.subheader(" Crear Nueva Publicación")
 
 col1, col2 = st.columns([1, 2])
 
@@ -94,7 +87,7 @@ with col1:
             with st.spinner("La IA está trabajando (esto puede tomar 15-30 segundos)..."):
                 modelo_data = next(m for m in SHINERAY_MODELS if m["nombre"] == modelo_seleccionado)
                 texto_generado = generar_texto_facebook(modelo_data)
-                imagen_bytes = generar_imagen(modelo_data["nombre"])
+                imagen_bytes = obtener_imagen_vehiculo(modelo_data["busqueda"])
                 
                 st.session_state['texto'] = texto_generado
                 st.session_state['imagen_bytes'] = imagen_bytes
@@ -107,13 +100,13 @@ with col2:
         if st.session_state['imagen_bytes']:
             st.image(st.session_state['imagen_bytes'], caption=f"Imagen para {st.session_state['modelo']}", use_container_width=True)
         else:
-            st.warning("⚠️ No se pudo generar la imagen. Intenta de nuevo.")
+            st.warning("⚠️ No se pudo obtener la imagen. Intenta de nuevo.")
         
         st.markdown("**💡 Tip:** Haz clic derecho en la imagen y selecciona 'Copiar imagen' para pegarla en Facebook")
         
         st.markdown("---")
         
-        st.markdown("### 📝 Texto del post:")
+        st.markdown("###  Texto del post:")
         st.text_area(
             "Copia este texto:", 
             value=st.session_state['texto'], 
@@ -122,7 +115,7 @@ with col2:
         )
         
         st.markdown("""
-        ### 📋 Instrucciones para publicar:
+        ###  Instrucciones para publicar:
         1. **Copia el texto** de arriba (selecciónalo y Ctrl+C)
         2. **Copia la imagen** (clic derecho sobre la imagen → Copiar imagen)
         3. Ve a tu **Facebook personal**
