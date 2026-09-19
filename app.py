@@ -1,8 +1,8 @@
 import streamlit as st
-import openai
 import requests
 import os
 import random
+import urllib.request
 from io import BytesIO
 
 # Configuración de OpenAI
@@ -43,31 +43,20 @@ def generar_texto_facebook(modelo):
         return f"Error al generar texto: {e}"
 
 def generar_imagen(modelo_nombre):
-    """Genera imagen usando gpt-image-1 de OpenAI"""
-    prompt = f"Professional commercial photography of a {modelo_nombre} white utility truck, working in Guadalajara Mexico, sunny day, realistic, high resolution, automotive advertisement style, clean background"
+    """Genera imagen usando Pollinations.ai (gratuito)"""
+    prompt = f"Professional commercial photography of a {modelo_nombre} white utility truck, Guadalajara Mexico, sunny day, realistic, automotive advertisement"
+    seed = random.randint(1, 9999)
+    
+    # URL directa de Pollinations
+    url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt)}?width=1024&height=1024&nologo=true&seed={seed}"
     
     try:
-        response = openai.images.generate(
-            model="gpt-image-1",
-            prompt=prompt,
-            size="1024x1024",
-            quality="high",
-            n=1,
-        )
-        
-        if response.data and len(response.data) > 0:
-            image_url = response.data[0].url
-            if image_url:
-                st.info(f"Descargando imagen desde: {image_url[:50]}...")
-                image_response = requests.get(image_url, timeout=30)
-                if image_response.status_code == 200:
-                    return BytesIO(image_response.content)
-        
-        st.error("No se recibió URL válida de OpenAI")
-        return None
-        
+        # Descargar la imagen
+        response = urllib.request.urlopen(url, timeout=30)
+        image_data = response.read()
+        return BytesIO(image_data)
     except Exception as e:
-        st.error(f"Error generando imagen con gpt-image-1: {e}")
+        st.error(f"Error con Pollinations: {e}")
         return None
 
 # INTERFAZ STREAMLIT
@@ -96,9 +85,9 @@ with col1:
     
     if st.button("✨ Generar Contenido con IA", type="primary", use_container_width=True):
         if not os.getenv("OPENAI_API_KEY"):
-            st.error(" Falta la clave de OpenAI. Ve a 'Manage app' → 'Secrets'")
+            st.error("❌ Falta la clave de OpenAI. Ve a 'Manage app' → 'Secrets'")
         else:
-            with st.spinner("La IA está trabajando (esto puede tomar 20-40 segundos)..."):
+            with st.spinner("La IA está trabajando (esto puede tomar 15-30 segundos)..."):
                 modelo_data = next(m for m in SHINERAY_MODELS if m["nombre"] == modelo_seleccionado)
                 texto_generado = generar_texto_facebook(modelo_data)
                 imagen_bytes = generar_imagen(modelo_data["nombre"])
