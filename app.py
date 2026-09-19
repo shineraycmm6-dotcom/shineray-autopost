@@ -4,9 +4,8 @@ import requests
 import os
 import random
 from io import BytesIO
-from PIL import Image
 
-# Configuración de OpenAI - Streamlit Cloud inyecta los Secrets automáticamente
+# Configuración de OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Modelos Shineray
@@ -27,7 +26,7 @@ def generar_texto_facebook(modelo):
     Características clave: {modelo['enfoque']}
     
     Requisitos:
-    - Usa emojis relevantes (🚛, ✅, 💰, 📍).
+    - Usa emojis relevantes (🚛, ✅, 💰, ).
     - Incluye un llamado a la acción claro.
     - Incluye 3 hashtags relevantes al final.
     - Tono: Profesional, confiable y entusiasta.
@@ -43,7 +42,7 @@ def generar_texto_facebook(modelo):
         return f"Error al generar texto: {e}"
 
 def generar_imagen_dalle(modelo_nombre):
-    """Genera imagen usando DALL-E 3 y la retorna como bytes para mostrar en Streamlit"""
+    """Genera imagen usando DALL-E 3"""
     prompt = f"Professional commercial photography of a {modelo_nombre} white utility truck, working in Guadalajara Mexico, sunny day, realistic, high resolution, automotive advertisement style, clean background"
     
     try:
@@ -54,18 +53,13 @@ def generar_imagen_dalle(modelo_nombre):
             quality="standard",
             n=1,
         )
-        # Obtener la URL de la imagen
         image_url = response.data[0].url
-        
-        # Descargar la imagen
         image_response = requests.get(image_url)
-        image_bytes = BytesIO(image_response.content)
-        
-        return image_bytes
+        return BytesIO(image_response.content)
     except Exception as e:
         st.error(f"Error generando imagen: {e}")
         return None
-        
+
 # INTERFAZ STREAMLIT
 st.set_page_config(page_title="Shineray AutoPost", page_icon="🚛", layout="wide")
 
@@ -74,12 +68,12 @@ st.markdown("### Genera publicaciones con IA para Facebook")
 st.markdown("---")
 
 # Sidebar
-st.sidebar.header("️ Configuración")
+st.sidebar.header("⚙️ Configuración")
 
 if os.getenv("OPENAI_API_KEY"):
     st.sidebar.success("✅ OpenAI Configurado")
 else:
-    st.sidebar.error("❌ Falta OPENAI_API_KEY en Secrets")
+    st.sidebar.error(" Falta OPENAI_API_KEY en Secrets")
 
 # Contenido principal
 st.subheader("🎨 Crear Nueva Publicación")
@@ -92,25 +86,25 @@ with col1:
     
     if st.button("✨ Generar Contenido con IA", type="primary", use_container_width=True):
         if not os.getenv("OPENAI_API_KEY"):
-            st.error("️ Falta la clave de OpenAI. Ve a 'Manage app' → 'Secrets' y agrega OPENAI_API_KEY")
+            st.error("❌ Falta la clave de OpenAI. Ve a 'Manage app' → 'Secrets'")
         else:
             with st.spinner("La IA está trabajando (esto puede tomar 20-30 segundos)..."):
-    modelo_data = next(m for m in SHINERAY_MODELS if m["nombre"] == modelo_seleccionado)
-    texto_generado = generar_texto_facebook(modelo_data)
-    imagen_bytes = generar_imagen_dalle(modelo_data["nombre"])
-    
-    st.session_state['texto'] = texto_generado
-    st.session_state['imagen_bytes'] = imagen_bytes
-    st.session_state['modelo'] = modelo_seleccionado
+                modelo_data = next(m for m in SHINERAY_MODELS if m["nombre"] == modelo_seleccionado)
+                texto_generado = generar_texto_facebook(modelo_data)
+                imagen_bytes = generar_imagen_dalle(modelo_data["nombre"])
+                
+                st.session_state['texto'] = texto_generado
+                st.session_state['imagen_bytes'] = imagen_bytes
+                st.session_state['modelo'] = modelo_seleccionado
 
 with col2:
-    if 'texto' in st.session_state and 'imagen' in st.session_state:
+    if 'texto' in st.session_state and 'imagen_bytes' in st.session_state:
         st.markdown("### Paso 2: Copia y publica")
         
-        if st.session_state.get('imagen_bytes'):
-    st.image(st.session_state['imagen_bytes'], caption=f"Imagen para {st.session_state['modelo']}", use_container_width=True)
-else:
-    st.warning("No se pudo generar la imagen. Intenta de nuevo.")
+        if st.session_state['imagen_bytes']:
+            st.image(st.session_state['imagen_bytes'], caption=f"Imagen para {st.session_state['modelo']}", use_container_width=True)
+        else:
+            st.warning("⚠️ No se pudo generar la imagen. Intenta de nuevo.")
         
         st.markdown("**💡 Tip:** Haz clic derecho en la imagen y selecciona 'Copiar imagen' para pegarla en Facebook")
         
