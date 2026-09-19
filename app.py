@@ -50,7 +50,7 @@ def generar_imagen_dalle(modelo_nombre):
             model="gpt-image-1",
             prompt=prompt,
             size="1024x1024",
-            quality="standard",
+            quality="high",
             n=1,
         )
         image_url = response.data[0].url
