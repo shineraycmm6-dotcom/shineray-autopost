@@ -1,8 +1,5 @@
 import streamlit as st
 import os
-import random
-from io import BytesIO
-import urllib.request
 
 # Intentar importar openai
 try:
@@ -14,21 +11,23 @@ except ImportError:
     st.error("❌ La librería 'openai' no está instalada. Verifica requirements.txt")
 
 # Modelos Shineray
+# "imagen" apunta a un archivo local en la carpeta images/ del repo.
+# Si un modelo todavía no tiene foto local, se muestra un aviso en vez de romper la app.
 SHINERAY_MODELS = [
-    {"nombre": "Shineray T30", "enfoque": "Mini Truck económica", "busqueda": "mini truck"},
-    {"nombre": "Shineray T32", "enfoque": "Doble cabina", "busqueda": "pickup truck"},
-    {"nombre": "Shineray T50", "enfoque": "Truck capacidad", "busqueda": "cargo truck"},
-    {"nombre": "Shineray X30", "enfoque": "Van carga", "busqueda": "cargo van"},
-    {"nombre": "Shineray G03F", "enfoque": "Cargo Van", "busqueda": "delivery van"},
-    {"nombre": "Shineray G05 Pro", "enfoque": "SUV comercial", "busqueda": "commercial SUV"}
+    {"nombre": "Shineray T30", "enfoque": "Mini Truck económica", "imagen": "images/t30.jpg"},
+    {"nombre": "Shineray T32", "enfoque": "Doble cabina", "imagen": "images/t32.jpg"},
+    {"nombre": "Shineray T50", "enfoque": "Truck capacidad", "imagen": "images/t50.jpg"},
+    {"nombre": "Shineray X30", "enfoque": "Van carga", "imagen": "images/x30.jpg"},
+    {"nombre": "Shineray G03F", "enfoque": "Cargo Van", "imagen": None},
+    {"nombre": "Shineray G05 Pro", "enfoque": "SUV comercial", "imagen": None},
 ]
 
 def generar_texto(modelo):
     if not OPENAI_AVAILABLE:
         return "Error: OpenAI no disponible"
-    
+
     prompt = f"Crea un post de Facebook para {modelo['nombre']}: {modelo['enfoque']}. Usa emojis y hashtags."
-    
+
     try:
         response = openai.chat.completions.create(
             model="gpt-4o-mini",
@@ -38,17 +37,17 @@ def generar_texto(modelo):
     except Exception as e:
         return f"Error: {e}"
 
-def obtener_imagen(busqueda):
-    url = f"https://source.unsplash.com/1024x1024/?{busqueda.replace(' ', ',')}&sig={random.randint(1,9999)}"
-    try:
-        response = urllib.request.urlopen(url, timeout=30)
-        return BytesIO(response.read())
-    except:
-        return None
+def obtener_imagen(modelo_data):
+    """Usa la foto real local del modelo en vez de buscar una foto random en internet
+    (source.unsplash.com dejó de funcionar por completo desde junio de 2024)."""
+    ruta = modelo_data.get("imagen")
+    if ruta and os.path.exists(ruta):
+        return ruta
+    return None
 
 # Interfaz
 st.set_page_config(page_title="Shineray AutoPost", layout="wide")
-st.title(" Shineray AutoPost")
+st.title("Shineray AutoPost")
 
 if OPENAI_AVAILABLE and os.getenv("OPENAI_API_KEY"):
     st.sidebar.success("✅ OpenAI OK")
@@ -59,18 +58,19 @@ modelo = st.selectbox("Modelo:", [m["nombre"] for m in SHINERAY_MODELS])
 
 if st.button("✨ Generar", type="primary"):
     modelo_data = next(m for m in SHINERAY_MODELS if m["nombre"] == modelo)
-    
+
     with st.spinner("Generando..."):
         texto = generar_texto(modelo_data)
-        imagen = obtener_imagen(modelo_data["busqueda"])
-        
+        imagen = obtener_imagen(modelo_data)
+
         st.session_state['texto'] = texto
         st.session_state['imagen'] = imagen
+        st.session_state['modelo_sel'] = modelo
 
 if 'texto' in st.session_state:
     st.text_area("Texto:", value=st.session_state['texto'], height=200)
-    
+
     if st.session_state.get('imagen'):
-        st.image(st.session_state['imagen'], caption=modelo)
+        st.image(st.session_state['imagen'], caption=st.session_state.get('modelo_sel'))
     else:
-        st.warning("No se pudo cargar la imagen")
+        st.warning("Este modelo todavía no tiene foto cargada en images/. Sube la foto real y agrégala en SHINERAY_MODELS.")
