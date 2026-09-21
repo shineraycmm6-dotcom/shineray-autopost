@@ -14,10 +14,10 @@ except ImportError:
 # "imagen" apunta a un archivo local en la carpeta images/ del repo.
 # Si un modelo todavía no tiene foto local, se muestra un aviso en vez de romper la app.
 SHINERAY_MODELS = [
-    {"nombre": "Shineray T30", "enfoque": "Mini Truck económica", "imagen": "images/t30.jpg"},
-    {"nombre": "Shineray T32", "enfoque": "Doble cabina", "imagen": "images/t32.jpg"},
-    {"nombre": "Shineray T50", "enfoque": "Truck capacidad", "imagen": "images/t50.jpg"},
-    {"nombre": "Shineray X30", "enfoque": "Van carga", "imagen": "images/x30.jpg"},
+    {"nombre": "Shineray T30", "enfoque": "Mini Truck económica", "imagen": "/t30.jpg"},
+    {"nombre": "Shineray T32", "enfoque": "Doble cabina", "imagen": "/t32.jpg"},
+    {"nombre": "Shineray T50", "enfoque": "Truck capacidad", "imagen": "/t50.jpg"},
+    {"nombre": "Shineray X30", "enfoque": "Van carga", "imagen": "/x30.jpg"},
     {"nombre": "Shineray G03F", "enfoque": "Cargo Van", "imagen": None},
     {"nombre": "Shineray G05 Pro", "enfoque": "SUV comercial", "imagen": None},
 ]
